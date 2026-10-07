@@ -66,7 +66,9 @@ export class WhatsAppInstance {
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: process.env.BAILEYS_LOG_LEVEL || "error" }) as any),
             },
             browser: ["Ubuntu", "Chrome", "20.0.04"],
-            markOnlineOnConnect: botConfig?.alwaysOnline ?? true,
+            // Keep the linked client unavailable by default so WhatsApp keeps
+            // delivering push notifications to the primary phone.
+            markOnlineOnConnect: botConfig?.alwaysOnline === true,
             syncFullHistory: true,
         });
 

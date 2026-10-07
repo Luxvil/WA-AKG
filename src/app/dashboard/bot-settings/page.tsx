@@ -307,8 +307,8 @@ export default function BotSettingsPage() {
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div className="flex items-center justify-between space-x-2 border p-3 rounded-lg">
                                     <Label htmlFor="always-online" className="flex flex-col space-y-1 cursor-pointer">
-                                        <span className="font-medium">Always Online</span>
-                                        <span className="font-normal text-[10px] text-muted-foreground">Stay "Online" even when inactive.</span>
+                                        <span className="font-medium">Sempre online</span>
+                                        <span className="font-normal text-[10px] text-muted-foreground">Pode impedir notificações no celular. Deixe desligado para receber alertas.</span>
                                     </Label>
                                     <Switch id="always-online" checked={botConfig.alwaysOnline}
                                         onCheckedChange={c => setBotConfig(prev => ({ ...prev, alwaysOnline: c }))} />
