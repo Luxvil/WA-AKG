@@ -129,13 +129,36 @@ function jsonReplacer(key: string, value: any) {
     return value;
 }
 
+/** Discord incoming webhooks require at least one Discord message field such as `content`. */
+function serializeWebhookBody(url: string, payload: WebhookPayload): string {
+    const parsedUrl = new URL(url);
+    const isDiscordWebhook = /(^|\.)discord(?:app)?\.com$/i.test(parsedUrl.hostname)
+        && parsedUrl.pathname.includes("/api/webhooks/");
+
+    if (!isDiscordWebhook) {
+        return JSON.stringify(payload, jsonReplacer);
+    }
+
+    const details = JSON.stringify(payload.data, jsonReplacer, 2);
+    const content = [
+        `**WA-AKG | ${payload.event}**`,
+        `Sessão: ${payload.sessionId}`,
+        `Horário: ${payload.timestamp}`,
+        "```json",
+        details.length > 1600 ? `${details.slice(0, 1590)}…` : details,
+        "```",
+    ].join("\n").slice(0, 2000);
+
+    return JSON.stringify({ content });
+}
+
 /**
  * Send HTTP POST request to webhook endpoint
  * Records delivery log to database
  */
 async function sendWebhookRequest(url: string, payload: WebhookPayload, secret?: string | null, webhookId?: string) {
     const startedAt = Date.now();
-    const body = JSON.stringify(payload, jsonReplacer);
+    const body = serializeWebhookBody(url, payload);
 
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -169,7 +192,8 @@ async function sendWebhookRequest(url: string, payload: WebhookPayload, secret?:
         }
 
         if (!response.ok) {
-            errorMessage = `Webhook returned ${response.status}: ${response.statusText}`;
+            const detail = responseBody?.trim();
+            errorMessage = `Destino respondeu HTTP ${response.status}${response.statusText ? ` (${response.statusText})` : ""}${detail ? `: ${detail}` : ". Confira o endereço, autenticação e formato aceito pelo destino."}`;
         }
     } catch (err: any) {
         errorMessage = err.message || "Webhook request failed";
@@ -278,12 +302,12 @@ export async function testWebhook(webhookId: string, url: string, secret?: strin
         sessionId: "test",
         timestamp: new Date().toISOString(),
         data: {
-            message: "This is a test webhook from WA-AKG",
+            message: "Teste de webhook do WA-AKG",
             timestamp: new Date().toISOString()
         }
     };
 
-    const body = JSON.stringify(testPayload, jsonReplacer);
+    const body = serializeWebhookBody(url, testPayload);
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
         "User-Agent": "WA-AKG-Webhook/1.0"
@@ -326,12 +350,13 @@ export async function testWebhook(webhookId: string, url: string, secret?: strin
         });
 
         if (!response.ok) {
+            const detail = responseBody?.trim();
             return {
                 success: false,
                 statusCode: response.status,
                 responseBody,
                 responseTimeMs,
-                error: `Returned ${response.status}: ${response.statusText}`
+                error: `O destino respondeu HTTP ${response.status}${response.statusText ? ` (${response.statusText})` : ""}${detail ? `: ${detail}` : ". Confira o endereço, autenticação e formato aceito pelo destino."}`
             };
         }
 
